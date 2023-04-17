@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import japanize_matplotlib
 
@@ -10,11 +11,14 @@ st.set_page_config(
 
 # csv読み込み
 df0 = pd.read_csv('test.csv', index_col = 0)
+df1 = pd.read_csv('gender_submission.csv', index_col = 0)
+
+df_merged = pd.merge(df0, df1, on='PassengerId')
 
 # セッション情報の初期化
 if "page_id" not in st.session_state:
     st.session_state.page_id = -1
-    st.session_state.df0 = df0
+    st.session_state.df0 = df_merged
 
 # 各種メニューの非表示設定
 hide_style = """
@@ -32,34 +36,67 @@ def main_page():
         unsafe_allow_html = True,
     )
 
-    column_list = st.session_state.df0.columns.values
-    column_list_selector = st.sidebar.selectbox("内容選択", column_list)
-    arr = []
+    chart_selector = st.sidebar.selectbox("グラフ選択",["bar","hist","pie"])
+    column_list_selector = st.sidebar.selectbox("内容選択", st.session_state.df0.columns.values)
+    survive_selector = st.sidebar.multiselect('生存者',('0(死亡)', '1(生存)'))
 
-    #top5=st.session_state.df0.sort_values(column_selector, ascending = False)[:5][column_list_selector]
 
-    #fig1, ax1 = plt.subplots(figsize = (6.4, 4.8))
+    column_arr = st.session_state.df0[column_list_selector]
+    column_arr0 = st.session_state.df0[st.session_state.df0["Survived"] == 0][column_list_selector]
+    column_arr1 = st.session_state.df0[st.session_state.df0["Survived"] == 1][column_list_selector]
+    kind = list(set(column_arr.dropna(how='all')))
 
-    #ax1.bar(top5.index.values,top5)
-    #ax1.set_title(column_list_selector+"店上位5位売り上げ")
-    #ax1.set_xlabel("売上年月日")
-    #ax1.set_ylabel("総売上")
+    count_arr = []
+    count_arr0 = []
+    count_arr1 = []
+    for i in range(len(kind)):
+        count_arr.append(list(column_arr).count(kind[i]))
+        count_arr0.append(list(column_arr0).count(kind[i]))
+        count_arr1.append(list(column_arr1).count(kind[i]))
 
-    kind = list(set(list(st.session_state.df0[column_list_selector])))
+    if chart_selector == "bar":
+        #fig1, ax1 = plt.subplots()
+        fig2, ax2 = plt.subplots()
+        #fig3, ax3 = plt.subplots()
 
-    arr.append(list(st.session_state.df0[column_list_selector]).count(kind[0]))
-    arr.append(list(st.session_state.df0[column_list_selector]).count(kind[1]))
+        ax2.bar(kind, count_arr, align="edge", width=0.2)
+        #ax1.set_title(column_list_selector)
 
-    fig2, ax2 = plt.subplots(figsize = (9.0, 5.4))
+        ax2.bar(kind, count_arr0, align="center", width=0.2)
+        #ax2.set_title(column_list_selector)
 
-    ax2.pie(arr, labels = kind)
-    ax2.set_title(column_list_selector)
-    ax2.set_xlabel("")
-    ax2.set_ylabel("")
+        ax2.bar(kind, count_arr1, align="edge", width=-0.2)
+        ax2.set_title(column_list_selector)
 
-    #st.pyplot(fig1)
-    st.pyplot(fig2)
-    st.text(set(list(st.session_state.df0[column_list_selector])))
+        #st.pyplot(fig1)
+        st.pyplot(fig2)
+        #st.pyplot(fig3)
+
+    if chart_selector == "hist":
+        bin = st.sidebar.slider('binの数を決めてください', 2, len(kind), len(kind))
+
+        Y, X, _ = plt.hist(column_arr, bins = bin)
+        y_max = int(max(Y)) + 1
+
+        fig2, ax2 = plt.subplots()
+
+        ax2.hist(list(column_arr), bins = bin, ec = 'navy')
+        #ax2.set_title("標準正規分布"+str(st.session_state.df0.shape[1])+"個データ")
+        ax2.set_xlabel(column_list_selector)
+        ax2.set_ylabel("度数")
+        ax2.set_yticks(np.arange(0,y_max,int(y_max/10)))
+
+        st.pyplot(fig2)
+
+    if chart_selector == "pie":
+        fig3, ax3 = plt.subplots()
+
+        ax3.pie(count_arr, startangle=90, labels = kind, autopct="%1.1f%%", labeldistance=0.7, pctdistance=0.5)
+        ax3.set_title(column_list_selector)
+
+        st.pyplot(fig3)
+
+    #st.text(st.session_state.df0[st.session_state.df0["Survived"] == 0])
 
 # ページ判定
 if st.session_state.page_id == -1:
