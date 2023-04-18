@@ -2,4 +2,5 @@
 
 https://analytics-jp-y-yamamoto-titanic-titanic-h8riyv.streamlit.app/
 
-Sexのみ円グラフが表示される状態です。
+barはほぼ完成
+barの結果からhistやpieで分析できるように作成
