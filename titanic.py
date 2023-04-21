@@ -11,9 +11,6 @@ st.set_page_config(
 
 # csv読み込み
 df0 = pd.read_csv('train.csv', index_col = 0)
-#df1 = pd.read_csv('gender_submission.csv', index_col = 0)
-
-#df_merged = pd.merge(df0, df1, on='PassengerId')
 
 # セッション情報の初期化
 if "page_id" not in st.session_state:
@@ -29,23 +26,28 @@ hide_style = """
         """
 st.markdown(hide_style, unsafe_allow_html = True)
 
+
+#選択する各項目のリスト作成用
+def df_list(column):
+    unique_list = st.session_state.df0[column].dropna(how='all').unique()
+    st.session_state.df_list = unique_list
+
+#選択されている項目のテキスト表示用
+def add_text(selector, column):
+    unique_list = st.session_state.df0[column].dropna(how='all').unique()
+    sort_unique_list = np.sort(unique_list)
+    selector = np.sort(selector)
+    if np.array_equal(selector, sort_unique_list) == True:
+        st.sidebar.text("全ての人が選ばれています。")
+    else:
+        st.sidebar.text(str(sort_unique_list).replace(str(selector),'') + "の人が除かれています。")
+
 # 最初のページ
 def main_page():
     st.markdown(
         "<h2 style='text-align: center;'>タイタニック表示</h2>",
         unsafe_allow_html = True,
     )
-
-    #選択する各項目のリスト作成用
-    def df_list(x):
-        st.session_state.df_list = list(set(st.session_state.df0[x].dropna(how='all')))
-
-    #選択されている項目のテキスト表示用
-    def add_text(x, y):
-        if list(set(x)) == list(set(st.session_state.df0[y].dropna(how='all'))):
-            st.sidebar.text("全ての人が選ばれています。")
-        else:
-            st.sidebar.text(str(set(st.session_state.df0[y].dropna(how='all')) - set(x)) + "の人が除かれています。")
 
     #元データから棒グラフ、円グラフ、ヒストグラムで描画しても複雑になる要素の削除
     column_list = st.session_state.df0.columns.values
@@ -69,21 +71,25 @@ def main_page():
     #サイドバー作成用
     #生存or死亡
     df_list("Survived")
-    st.session_state.survive_selector = st.sidebar.multiselect("Survived",st.session_state.df_list, default = st.session_state.df_list)
-    if st.session_state.survive_selector == [0]:
+    survive_selector = st.sidebar.multiselect("Survived",st.session_state.df_list, default = st.session_state.df_list)
+    if survive_selector == [0]:
         st.sidebar.text("生存者が選ばれています。")
-    elif st.session_state.survive_selector == [1]:
+    elif survive_selector == [1]:
         st.sidebar.text("死亡者が選ばれています。")
+    elif survive_selector == []:
+        st.sidebar.text("誰も選ばれていません")
     else:
         st.sidebar.text("全ての人が選ばれています。")
 
     #性別
     df_list("Sex")
-    st.session_state.sex_selector = st.sidebar.multiselect("Sex", st.session_state.df_list, default = st.session_state.df_list)
-    if st.session_state.sex_selector == ["male"]:
+    sex_selector = st.sidebar.multiselect("Sex", st.session_state.df_list, default = st.session_state.df_list)
+    if sex_selector == ["male"]:
         st.sidebar.text("男性が選ばれています。")
-    elif st.session_state.sex_selector == ["female"]:
+    elif sex_selector == ["female"]:
         st.sidebar.text("女性が選ばれています。")
+    elif sex_selector == []:
+        st.sidebar.text("誰も選ばれていません")
     else:
         st.sidebar.text("全ての人が選ばれています。")
 
@@ -104,8 +110,8 @@ def main_page():
 
     st.session_state.select_arr = st.session_state.df0[
                                         (
-                                        st.session_state.df0["Survived"].isin(st.session_state.survive_selector)
-                                        & st.session_state.df0["Sex"].isin(st.session_state.sex_selector)
+                                        st.session_state.df0["Survived"].isin(survive_selector)
+                                        & st.session_state.df0["Sex"].isin(sex_selector)
                                         & st.session_state.df0["SibSp"].isin(sibsp_selector)
                                         & st.session_state.df0["Parch"].isin(parch_selector)
                                         & st.session_state.df0["Embarked"].isin(embarked_selector)
